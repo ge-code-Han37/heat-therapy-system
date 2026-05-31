@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CUREX — Space Health Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #080c14;
+    --panel:     #0d1421;
+    --border:    #1a2540;
+    --accent:    #4fc3f7;
+    --heat:      #ff6b35;
+    --cool:      #4fc3f7;
+    --idle:      #4ade80;
+    --warn:      #fbbf24;
+    --text:      #e2e8f0;
+    --muted:     #4a5568;
+    --glow-blue: 0 0 20px rgba(79,195,247,0.3);
+    --glow-heat: 0 0 20px rgba(255,107,53,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Star background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 75%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 92% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 45% 90%, rgba(255,255,255,0.2) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--glow-blue);
+    font-size: 20px;
+  }
+
+  .logo h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #fff;
+  }
+
+  .logo span {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    margin-top: 2px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .mission-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .status-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-badge::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  .status-idle   { border-color: var(--idle);  color: var(--idle); }
+  .status-idle::before  { background: var(--idle); box-shadow: 0 0 6px var(--idle); }
+  .status-heat   { border-color: var(--heat);  color: var(--heat); }
+  .status-heat::before  { background: var(--heat); box-shadow: 0 0 6px var(--heat); }
+  .status-cool   { border-color: var(--cool);  color: var(--cool); }
+  .status-cool::before  { background: var(--cool); box-shadow: 0 0 6px var(--cool); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  /* Section label */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Cards grid */
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 750px) {
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* Metric card */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-accent, var(--border));
+    transition: background 0.3s;
+  }
+
+  .card.highlight { border-color: var(--card-accent); box-shadow: 0 0 16px rgba(79,195,247,0.15); }
+
+  .card-icon {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .card-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--card-accent, #fff);
+    transition: color 0.3s;
+  }
+
+  .card-unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  .card-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    margin-top: 0.5rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  /* Gauge bar */
+  .gauge-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 0.75rem;
+    overflow: hidden;
+  }
+
+  .gauge-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--card-accent, var(--accent));
+    transition: width 0.6s ease;
+  }
+
+  /* Therapy panel */
+  .therapy-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .therapy-icon-wrap {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--therapy-color, var(--border));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 16px var(--therapy-glow, transparent);
+    transition: all 0.4s;
+  }
+
+  .therapy-info h3 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+
+  .therapy-info p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Log */
+  .log-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .log-entries {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    max-height: 140px;
+    overflow-y: auto;
+  }
+
+  .log-entry {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    color: var(--muted);
+  }
+
+  .log-entry:last-child { border-bottom: none; }
+
+  .log-time { color: var(--accent); flex-shrink: 0; }
+  .log-msg.warn  { color: var(--warn); }
+  .log-msg.heat  { color: var(--heat); }
+  .log-msg.cool  { color: var(--cool); }
+  .log-msg.ok    { color: var(--idle); }
+
+  /* Offline banner */
+  .offline-banner {
+    background: rgba(251,191,36,0.1);
+    border: 1px solid var(--warn);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--warn);
+    margin-bottom: 1.5rem;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .offline-banner.show { display: flex; }
+
+  /* Footer */
+  footer {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  footer p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .nasa-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🧤</div>
+      <div>
+        <h1>CUREX</h1>
+        <span>SMART THERAPEUTIC GLOVE</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="mission-tag">MISSION_2025 / ASTRONAUT_001</span>
+      <div class="status-badge status-idle" id="statusBadge">IDLE</div>
+    </div>
+  </header>
+
+  <div class="offline-banner" id="offlineBanner">
+    ⚠ Device not reachable — showing simulated data. Set DEVICE_IP below to connect.
+  </div>
+
+  <!-- Vital signs -->
+  <div class="section-label">❤ vital signs</div>
+  <div class="grid-4" style="margin-bottom: 2rem;">
+
+    <div class="card" id="cardBody" style="--card-accent: #ff6b35;">
+      <div class="card-icon">🌡</div>
+      <div class="card-label">Body Temp</div>
+      <div class="card-value" id="valBodyTemp">—</div>
+      <div class="card-unit">°C</div>
+      <div class="gauge-track"><div class="gauge-fill" id="gaugeBody" style="width:0%"></div></div>
+      <div class="card-sub" id="subBody" style="background:rgba(255,107,53,0.1);color:var(--heat)">Normal</div>
+    </div>
+
+    <div class="card" id="cardAmbient" style="--card-accent: #4fc3f7;">
+      <div class="card-icon">🌡</div>
+      <div class="card-label">Ambient Temp</div>
+      <div class="card-value" id="valAmbientTemp">—</div>
+      <div class="card-unit">°C</div>
+      <div class="gauge-track"><div class="gauge-fill" id="gaugeAmbient" style="width:0%"></div></div>
+      <div class="card-sub" id="subAmbient" style="background:rgba(79,195,247,0.1);color:var(--cool)">—</div>
+    </div>
+
+    <div class="card" id="cardHumid" style="--card-accent: #a78bfa;">
+      <div class="card-icon">💧</div>
+      <div class="card-label">Humidity</div>
+      <div class="card-value" id="valHumidity">—</div>
+      <div class="card-unit">%</div>
+      <div class="gauge-track"><div class="gauge-fill" id="gaugeHumid" style="width:0%"></div></div>
+      <div class="card-sub" id="subHumid" style="background:rgba(167,139,250,0.1);color:#a78bfa">—</div>
+    </div>
+
+    <div class="card" id="cardFlex" style="--card-accent: #fbbf24;">
+      <div class="card-icon">✋</div>
+      <div class="card-label">Joint Flex</div>
+      <div class="card-value" id="valFlex">—</div>
+      <div class="card-unit">/ 1023</div>
+      <div class="gauge-track"><div class="gauge-fill" id="gaugeFlex" style="width:0%"></div></div>
+      <div class="card-sub" id="subFlex" style="background:rgba(251,191,36,0.1);color:var(--warn)">—</div>
+    </div>
+
+  </div>
+
+  <!-- Swelling + Therapy -->
+  <div class="section-label">🔬 diagnostics & therapy</div>
+  <div class="grid-2">
+
+    <div class="card" style="--card-accent: #f472b6;">
+      <div class="card-icon">🤲</div>
+      <div class="card-label">Swelling Index (FSR)</div>
+      <div class="card-value" id="valSwelling" style="color:#f472b6">—</div>
+      <div class="card-unit">/ 1023</div>
+      <div class="gauge-track"><div class="gauge-fill" id="gaugeSwelling" style="width:0%; background:#f472b6"></div></div>
+      <div class="card-sub" id="subSwelling" style="background:rgba(244,114,182,0.1);color:#f472b6; margin-top:0.5rem">—</div>
+    </div>
+
+    <div class="therapy-card" id="therapyCard">
+      <div class="therapy-icon-wrap" id="therapyIcon" style="--therapy-color:#4a5568; --therapy-glow:transparent">💤</div>
+      <div class="therapy-info">
+        <h3 id="therapyTitle">No Active Therapy</h3>
+        <p id="therapyDesc">All vitals within normal range.<br>Peltier module on standby.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Event log -->
+  <div class="section-label">📋 event log</div>
+  <div class="log-panel">
+    <div class="log-entries" id="logEntries">
+      <div class="log-entry">
+        <span class="log-time">--:--:--</span>
+        <span class="log-msg ok">System initializing...</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>CUREX v1.0 — Built by Team Curex</p>
+    <span class="nasa-badge">🚀 NASA SPACE APPS 2025 — 2ND PLACE REGIONAL</span>
+  </footer>
+
+</div>
+
+<script>
+// ── CONFIG — change this to your Arduino's IP address ────────
+const DEVICE_IP = "192.168.1.100";
+const FETCH_URL = `http://${DEVICE_IP}/data`;
+const POLL_MS   = 1500;
+
+// ── Demo/simulation mode ─────────────────────────────────────
+let simMode = true;
+let simTick = 0;
+
+function getSimData() {
+  simTick++;
+  const t = simTick * 0.05;
+  return {
+    bodyTemp:    36.5 + Math.sin(t) * 1.5,
+    ambientTemp: 21 + Math.sin(t * 0.4) * 3,
+    humidity:    42 + Math.sin(t * 0.3) * 8,
+    swelling:    300 + Math.sin(t * 0.7) * 250,
+    flex:        350 + Math.sin(t * 0.5) * 200,
+    therapy:     simTick % 30 < 10 ? "HEATING" : simTick % 30 < 20 ? "COOLING" : "IDLE"
+  };
+}
+
+// ── Fetch from device ─────────────────────────────────────────
+async function fetchData() {
+  try {
+    const res = await fetch(FETCH_URL, { signal: AbortSignal.timeout(1200) });
+    const d = await res.json();
+    simMode = false;
+    document.getElementById("offlineBanner").classList.remove("show");
+    return d;
+  } catch {
+    simMode = true;
+    document.getElementById("offlineBanner").classList.add("show");
+    return getSimData();
+  }
+}
+
+// ── Update UI ─────────────────────────────────────────────────
+function update(d) {
+  const now = new Date().toTimeString().slice(0,8);
+
+  // Body temp
+  setText("valBodyTemp", d.bodyTemp.toFixed(1));
+  setGauge("gaugeBody", d.bodyTemp, 35, 40);
+  const bodyOk = d.bodyTemp >= 36 && d.bodyTemp <= 37.5;
+  setSub("subBody", bodyOk ? "Normal" : d.bodyTemp < 36 ? "Too Low" : "Elevated",
+         bodyOk ? "#4ade80" : "#ff6b35");
+
+  // Ambient temp
+  setText("valAmbientTemp", d.ambientTemp.toFixed(1));
+  setGauge("gaugeAmbient", d.ambientTemp, 15, 35);
+  setSub("subAmbient", d.ambientTemp < 20 ? "Cool" : d.ambientTemp < 27 ? "Comfortable" : "Warm",
+         "#4fc3f7");
+
+  // Humidity
+  setText("valHumidity", Math.round(d.humidity));
+  setGauge("gaugeHumid", d.humidity, 0, 100);
+  setSub("subHumid", d.humidity < 30 ? "Dry" : d.humidity < 60 ? "Optimal" : "Humid", "#a78bfa");
+
+  // Flex
+  setText("valFlex", Math.round(d.flex));
+  setGauge("gaugeFlex", d.flex, 0, 1023);
+  const flexHigh = d.flex > 500;
+  setSub("subFlex", flexHigh ? "Stiffness detected" : "Normal range",
+         flexHigh ? "#fbbf24" : "#4ade80");
+
+  // Swelling
+  setText("valSwelling", Math.round(d.swelling));
+  setGauge("gaugeSwelling", d.swelling, 0, 1023);
+  const swellHigh = d.swelling > 600;
+  setSub("subSwelling", swellHigh ? "⚠ Swelling detected" : "Normal", swellHigh ? "#f472b6" : "#4ade80");
+
+  // Therapy mode
+  updateTherapy(d.therapy);
+  updateStatusBadge(d.therapy);
+
+  // Log notable events
+  if (d.therapy !== "IDLE") {
+    addLog(now, `Therapy active: ${d.therapy}`, d.therapy === "HEATING" ? "heat" : "cool");
+  }
+  if (swellHigh) addLog(now, "Swelling threshold exceeded", "warn");
+}
+
+function setText(id, val) {
+  document.getElementById(id).textContent = val;
+}
+
+function setGauge(id, val, min, max) {
+  const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));
+  document.getElementById(id).style.width = pct.toFixed(1) + "%";
+}
+
+function setSub(id, text, color) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.style.color = color;
+}
+
+function updateTherapy(mode) {
+  const icon  = document.getElementById("therapyIcon");
+  const title = document.getElementById("therapyTitle");
+  const desc  = document.getElementById("therapyDesc");
+
+  if (mode === "HEATING") {
+    icon.textContent = "🔥";
+    icon.style.setProperty("--therapy-color", "#ff6b35");
+    icon.style.setProperty("--therapy-glow", "rgba(255,107,53,0.4)");
+    title.textContent = "Heat Therapy Active";
+    title.style.color = "#ff6b35";
+    desc.textContent  = "Peltier heating → 38°C–42°C\nStimulating circulation & relieving stiffness.";
+  } else if (mode === "COOLING") {
+    icon.textContent = "❄️";
+    icon.style.setProperty("--therapy-color", "#4fc3f7");
+    icon.style.setProperty("--therapy-glow", "rgba(79,195,247,0.4)");
+    title.textContent = "Cold Therapy Active";
+    title.style.color = "#4fc3f7";
+    desc.textContent  = "Peltier cooling → 15°C–20°C\nReducing inflammation & swelling.";
+  } else {
+    icon.textContent = "💤";
+    icon.style.setProperty("--therapy-color", "#4a5568");
+    icon.style.setProperty("--therapy-glow", "transparent");
+    title.textContent = "No Active Therapy";
+    title.style.color = "#e2e8f0";
+    desc.textContent  = "All vitals within normal range.\nPeltier module on standby.";
+  }
+}
+
+function updateStatusBadge(mode) {
+  const badge = document.getElementById("statusBadge");
+  badge.className = "status-badge";
+  if (mode === "HEATING") { badge.classList.add("status-heat"); badge.textContent = "HEATING"; }
+  else if (mode === "COOLING") { badge.classList.add("status-cool"); badge.textContent = "COOLING"; }
+  else { badge.classList.add("status-idle"); badge.textContent = "IDLE"; }
+}
+
+const seenLogs = new Set();
+function addLog(time, msg, type = "") {
+  const key = `${time}:${msg}`;
+  if (seenLogs.has(key)) return;
+  seenLogs.add(key);
+  const el = document.getElementById("logEntries");
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
+  el.prepend(entry);
+  while (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+// ── Poll loop ─────────────────────────────────────────────────
+async function poll() {
+  const d = await fetchData();
+  update(d);
+}
+
+poll();
+setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>
