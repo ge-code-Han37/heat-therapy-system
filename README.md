@@ -26,7 +26,7 @@ CUREX is a wearable smart glove that:
 
 | Prototype | Dashboard |
 |-----------|-----------|
-| ![Prototype](assets/prototype_photo.jpg) | ![Dashboard](assets/dashboard_screenshot.png) |
+| ![Prototype](assets/prototype_photo.png) | ![Dashboard](assets/dashboard_screenshot.png) |
 
 ---
 
